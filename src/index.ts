@@ -21,6 +21,10 @@ type Options = {
   transactionOrigin?: any;
 };
 
+type ValtioOptions = {
+  subscribeNotifyInSync?: boolean;
+};
+
 const transact = (doc: Y.Doc | null, opts: Options, fn: () => void) => {
   if (doc) {
     doc.transact(fn, opts.transactionOrigin);
@@ -98,6 +102,7 @@ export function bind<T>(
   p: Record<string, T> | T[],
   y: Y.Map<T> | Y.Array<T>,
   opts: Options = {},
+  valtioOpts: ValtioOptions = {},
 ): () => void {
   if (isProxyArray(p) && !(y instanceof Y.Array)) {
     if (process.env.NODE_ENV !== 'production') {
@@ -122,7 +127,7 @@ export function bind<T>(
   }
 
   // subscribe p
-  const unsubscribeP = subscribeP(p, y, opts);
+  const unsubscribeP = subscribeP(p, y, opts, valtioOpts);
 
   // subscribe y
   const unsubscribeY = subscribeY(y, p);
@@ -214,7 +219,9 @@ function subscribeP<T>(
   p: Record<string, T> | T[],
   y: Y.Map<T> | Y.Array<T>,
   opts: Options,
+  valtioOpts: ValtioOptions,
 ) {
+  const notifyInSync = valtioOpts.subscribeNotifyInSync;
   return subscribe(p, (ops) => {
     transact(y.doc, opts, () => {
       ops.forEach((op) => {
@@ -262,7 +269,7 @@ function subscribeP<T>(
         }
       });
     });
-  });
+  }, notifyInSync);
 }
 
 function subscribeY<T>(y: Y.Map<T> | Y.Array<T>, p: Record<string, T> | T[]) {
